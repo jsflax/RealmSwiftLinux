@@ -13,7 +13,7 @@ let cxxSettings: [CXXSetting] = [
     .define("REALM_ENABLE_SYNC", to: "1"),
     .define("REALM_COCOA_VERSION", to: "@\"\(cocoaVersion)\""),
     .define("REALM_VERSION", to: "\"\(coreVersion)\""),
-    .define("REALM_IOPLATFORMUUID", to: "@\"\(runCommand())\""),
+    .define("REALM_IOPLATFORMUUID", to: "@\"\("Playgrounds")\""),
 
     .define("REALM_DEBUG", .when(configuration: .debug)),
     .define("REALM_NO_CONFIG"),
@@ -35,39 +35,6 @@ let testCxxSettings: [CXXSetting] = cxxSettings + [
     .headerSearchPath("Realm"),
     .headerSearchPath(".."),
 ]
-
-
-func runCommand() -> String {
-    let task = Process()
-    let pipe = Pipe()
-
-    task.standardOutput = pipe
-    task.standardError = pipe
-    task.launchPath = "/usr/sbin/ioreg"
-    task.arguments = ["-rd1", "-c", "IOPlatformExpertDevice"]
-    task.standardInput = nil
-    task.launch()
-
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    let output = String(data: data, encoding: .utf8) ?? ""
-    let range = NSRange(output.startIndex..., in: output)
-    guard let regex = try? NSRegularExpression(pattern: ".*\\\"IOPlatformUUID\\\"\\s=\\s\\\"(.+)\\\"", options: .caseInsensitive),
-          let firstMatch = regex.matches(in: output, range: range).first else {
-        return ""
-    }
-
-    let matches = (0..<firstMatch.numberOfRanges).compactMap { ind -> String? in
-        let matchRange = firstMatch.range(at: ind)
-        if matchRange != range,
-           let substringRange = Range(matchRange, in: output) {
-            let capture = String(output[substringRange])
-            return capture
-        }
-        return nil
-    }
-    return matches.last ?? ""
-}
-
 
 let package = Package(
     name: "Realm",
