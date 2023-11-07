@@ -1,0 +1,4 @@
+module realmCxx {
+    export *
+    header "realmCxx.h"
+}

@@ -1,14 +1,120 @@
 // swift-tools-version: 5.9
 // The swift-tools-version declares the minimum version of Swift required to build this package.
-
+import Foundation
 import PackageDescription
+import CompilerPluginSupport
+
+let coreVersion = Version("13.17.0")
+let cocoaVersion = Version("10.41.1")
+
+let cxxSettings: [CXXSetting] = [
+    .define("__cpp_coroutines", to: "0"),
+    .define("REALM_SPM", to: "1"),
+    .define("REALM_ENABLE_SYNC", to: "1"),
+    .define("REALM_COCOA_VERSION", to: "@\"\(cocoaVersion)\""),
+    .define("REALM_VERSION", to: "\"\(coreVersion)\""),
+    .define("REALM_IOPLATFORMUUID", to: "@\"\(runCommand())\""),
+
+    .define("REALM_DEBUG", .when(configuration: .debug)),
+    .define("REALM_NO_CONFIG"),
+    .define("REALM_INSTALL_LIBEXECDIR", to: ""),
+    .define("REALM_ENABLE_ASSERTIONS", to: "1"),
+    .define("REALM_ENABLE_ENCRYPTION", to: "1"),
+
+    .define("REALM_VERSION_MAJOR", to: String(coreVersion.major)),
+    .define("REALM_VERSION_MINOR", to: String(coreVersion.minor)),
+    .define("REALM_VERSION_PATCH", to: String(coreVersion.patch)),
+    .define("REALM_VERSION_EXTRA", to: "\"\(coreVersion.prereleaseIdentifiers.first ?? "")\""),
+    .define("REALM_VERSION_STRING", to: "\"\(coreVersion)\""),
+//    .define("CPPREALM_HAVE_GENERATED_BRIDGE_TYPES", to: "1")
+]
+let testCxxSettings: [CXXSetting] = cxxSettings + [
+    // Command-line `swift build` resolves header search paths
+    // relative to the package root, while Xcode resolves them
+    // relative to the target root, so we need both.
+    .headerSearchPath("Realm"),
+    .headerSearchPath(".."),
+]
+
+
+func runCommand() -> String {
+    let task = Process()
+    let pipe = Pipe()
+
+    task.standardOutput = pipe
+    task.standardError = pipe
+    task.launchPath = "/usr/sbin/ioreg"
+    task.arguments = ["-rd1", "-c", "IOPlatformExpertDevice"]
+    task.standardInput = nil
+    task.launch()
+
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    let output = String(data: data, encoding: .utf8) ?? ""
+    let range = NSRange(output.startIndex..., in: output)
+    guard let regex = try? NSRegularExpression(pattern: ".*\\\"IOPlatformUUID\\\"\\s=\\s\\\"(.+)\\\"", options: .caseInsensitive),
+          let firstMatch = regex.matches(in: output, range: range).first else {
+        return ""
+    }
+
+    let matches = (0..<firstMatch.numberOfRanges).compactMap { ind -> String? in
+        let matchRange = firstMatch.range(at: ind)
+        if matchRange != range,
+           let substringRange = Range(matchRange, in: output) {
+            let capture = String(output[substringRange])
+            return capture
+        }
+        return nil
+    }
+    return matches.last ?? ""
+}
+
 
 let package = Package(
-    name: "RealmSwiftLinux",
+    name: "Realm",
+    platforms: [.macOS(.v10_15)],
+    products: [
+        .library(
+             name: "realmCxx",
+             targets: ["realmCxx"]),
+        .library(name: "Realm", targets: ["Realm"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/realm/realm-cpp.git", branch: "jf/bridgingdemo"),
+        .package(url: "https://github.com/apple/swift-syntax.git", from: "509.0.2"),
+    ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
+        .target(
+            name: "realmCxx",
+            dependencies: [
+                .product(name: "realm-cpp-sdk", package: "realm-cpp")
+            ],
+            path: "realmCxx",
+            cxxSettings: cxxSettings,
+            swiftSettings: [.interoperabilityMode(.Cxx)]
+        ),
+        .macro(
+            name: "RealmMacros",
+            dependencies: [
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
+            ],
+            path: "RealmMacros"
+//            swiftSettings: [.interoperabilityMode(.Cxx)]
+        ),
+        .target(name: "Realm",
+                dependencies: ["RealmMacros", "realmCxx"],
+                path: "Realm",
+                cxxSettings: cxxSettings,
+                swiftSettings: [
+                    .interoperabilityMode(.Cxx)
+                ]),
         .executableTarget(
-            name: "RealmSwiftLinux"),
-    ]
+            name: "RealmTests",
+            dependencies: ["Realm"],
+            path: "RealmTests",
+            cxxSettings: cxxSettings,
+            swiftSettings: [.interoperabilityMode(.Cxx)]),
+    ],
+    cxxLanguageStandard: .cxx20
 )
