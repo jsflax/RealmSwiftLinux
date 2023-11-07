@@ -1,60 +1,6 @@
 import Foundation
 import Realm
 
-//struct Person : Object {
-//    enum Change : ObjectChangeKind {
-//        init(name: String, oldValue: (any Persistable)?, newValue: (any Persistable)?) {
-//            self = .name(oldValue: oldValue as? String, newValue: newValue as? String)
-//        }
-//        case name(oldValue: String?, newValue: String?)
-//    }
-//    
-//    static var objectSchema: ObjectSchema {
-//        ObjectSchema(name: "Person", properties: [
-//            Property(name: "name", keyPath: \Person._name),
-//            Property(name: "age", keyPath: \Person._age),
-//        ])
-//    }
-//    
-//    var object: bridge.object? = nil
-//    
-//    private var _name: PropertyStorage<String> = .unmanaged("")
-//    var name: String {
-//        get {
-//            switch _name {
-//            case .unmanaged(let value): 
-//                return value
-//            case .managed(let colKey): 
-//                return object!.swift_get(colKey)
-//            }
-//        }
-//        set {
-//            if var object = object, case let .managed(colKey) = _name {
-//                object.swift_set(colKey, newValue)
-//            } else {
-//                _name = .unmanaged(newValue)
-//            }
-//        }
-//    }
-//    
-//    private var _age: PropertyStorage<Int> = .unmanaged(0)
-//    var age: Int {
-//        get {
-//            switch _age {
-//            case .unmanaged(let value): return value
-//            case .managed(let colKey): return object!.swift_get(colKey)
-//            }
-//        }
-//        set {
-//            if var object = object, case let .managed(colKey) = _age {
-//                object.swift_set(colKey, newValue)
-//            } else {
-//                _age = .unmanaged(newValue)
-//            }
-//        }
-//    }
-//}
-
 @Object struct Person {
     var name: String
     var age: Int
