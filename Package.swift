@@ -38,7 +38,9 @@ let testCxxSettings: [CXXSetting] = cxxSettings + [
 
 let package = Package(
     name: "Realm",
-    platforms: [.macOS(.v10_15)],
+    platforms: [
+        .macOS(.v10_15)
+    ],
     products: [
         .library(
              name: "realmCxx",
@@ -46,7 +48,8 @@ let package = Package(
         .library(name: "Realm", targets: ["Realm"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/realm/realm-cpp.git", branch: "jf/bridgingdemo"),
+        .package(url: "https://github.com/jsflax/realm-cpp.git",
+                 from: "0.5.1"),
         .package(url: "https://github.com/apple/swift-syntax.git", from: "509.0.2"),
     ],
     targets: [
@@ -67,7 +70,6 @@ let package = Package(
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
             ],
             path: "RealmMacros"
-//            swiftSettings: [.interoperabilityMode(.Cxx)]
         ),
         .target(name: "Realm",
                 dependencies: ["RealmMacros", "realmCxx"],
