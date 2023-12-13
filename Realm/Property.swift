@@ -104,18 +104,7 @@ public enum PropertyStorage<T : Persistable> {
     case managed(realmCxx.bridge.col_key)
 }
 
-public protocol BridgingObject {
-    func swift_get(_ key: bridge.col_key) -> String
-    func swift_get(_ key: bridge.col_key) -> Int
-    func swift_get<T>(_ key: bridge.col_key) -> T where T : Object
-    func swift_get<T>(_ key: bridge.col_key) -> Optional<T> where T : Persistable
-    mutating func swift_set(_ key: bridge.col_key, _ value: inout Int)
-    mutating func swift_set(_ key: bridge.col_key, _ value: inout String)
-    mutating func swift_set<T>(_ key: bridge.col_key, _ value: inout T?) where T : Object
-    func swift_observe(_ block: @escaping (ObjectChange) -> Void) -> NotificationToken
-}
-
-extension realmCxx.bridge.object : BridgingObject {
+extension realmCxx.bridge.object {
     public func swift_get(_ key: bridge.col_key) -> String {
         let ret: String.CxxValue = self.get_obj().get(key)
         return String(ret)

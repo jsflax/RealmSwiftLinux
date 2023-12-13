@@ -1,64 +1,58 @@
 import realmCxx
 
-public struct Config {
-    fileprivate var config = realmCxx.bridge.realm.config()
-    public var schema: Schema? {
+public extension realmCxx.bridge.realm.config {
+    var schema: Schema? {
         get {
-            var config = config
-            return Optional(fromCxx: config.get_schema())
+            var cpy = self
+            return Optional(fromCxx: cpy.get_schema())
         }
         set {
             if let newValue = newValue {
-                config.set_schema(newValue)
+                set_schema(newValue)
             }
         }
     }
     
-    public init(path: String, schema: Schema? = nil) {
-        self.schema = schema
-        config.set_path(std.string(path))
+    init(path: String, schema: Schema? = nil) {
+        self = realmCxx.bridge.realm.config()
+        if let schema = schema {
+            self.set_schema(schema)
+        }
+        self.set_path(std.string(path))
+    }
+}
+extension realm.Exception : Error, CustomStringConvertible {
+    public var description: String {
+        String(string_view_to_string(self.reason()))
     }
 }
 
-public struct Results<Element : Object> : Sequence {
-    public struct Iterator : IteratorProtocol {
-        var i = 0
-        var results: bridge.results
-        var realm: Realm
-        public mutating func next() -> Element? {
-            if i >= results.size() {
-                return nil
-            }
-            defer { i += 1 }
-            let obj = results_get(&results, i)
-            return Element(bridge.object(realm._realm, obj))
-        }
-    }
-    var results: bridge.results
-    var realm: Realm
-    
-    public func makeIterator() -> Iterator {
-        Iterator(results: self.results, realm: self.realm)
-    }
-    
-    public var count: Int {
-        var results = self.results
-        return results.size()
-    }
-}
+public typealias Config = realmCxx.bridge.realm.config
+
+//func cxx_try<T>(_ block: () -> T) throws -> T {
+//    return try_catch {
+//        return block()
+//    }
+//}
 
 public struct Realm {
     public let sharedSchema: [any Object.Type]
     package var _realm: realmCxx.bridge.realm
     
     public init(config: Config = Config(path: "default.realm"),
-                _ types: any Object.Type...) {
+                _ types: any Object.Type...) throws {
         self.sharedSchema = types
         var config = config
         if config.schema == nil {
             config.schema = Schema(objectSchemas: sharedSchema.map { $0.objectSchema })
         }
-        _realm = realmCxx.bridge.realm(config.config)
+
+        let variant = get_realm(config)
+        if realmCxx.holds_exception(variant) {
+            let error: realm.Exception = variant_get(variant)
+            throw error
+        }
+        _realm = variant_get(variant)
     }
     
     public func write(_ block: () -> Void) {
@@ -101,3 +95,5 @@ public macro Object() = #externalMacro(module: "RealmMacros", type: "ObjectMacro
 @attached(accessor)
 @available(swift 5.9)
 public macro Persisted() = #externalMacro(module: "RealmMacros", type: "PersistedMacro")
+@freestanding(expression)
+macro cxxTry<T>(_ block: () -> T) -> T = #externalMacro(module: "RealmMacros", type: "CxxTry")

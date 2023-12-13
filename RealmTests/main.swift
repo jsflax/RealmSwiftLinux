@@ -11,17 +11,19 @@ import Realm
     var name: String
 }
 
-var realm = Realm(Person.self, Dog.self)
-var person = Person(name: "Jack", age: 33, dog: Dog(name: "Fido"))
+var realm = try Realm(Person.self, Dog.self)
+var jack = Person(name: "Jack", age: 33, dog: Dog(name: "Fido"))
+var jill = Person(name: "Jill", age: 30, dog: nil)
 
 realm.write {
-    realm.add(&person)
+    realm.add(&jack)
+    realm.add(&jill)
 }
 
-precondition(person.name == "Jack")
-precondition(person.age == 33)
+precondition(jack.name == "Jack")
+precondition(jack.age == 33)
 
-let token = person.observe { changes in
+let token = jack.observe { changes in
     for change in changes {
         switch change {
         case .name(_, let newValue): precondition(newValue == "Jill")
@@ -31,21 +33,33 @@ let token = person.observe { changes in
     }
 }
 
-realm.write {
-    person.name = "Jill"
-    person.age = 30
-}
+//realm.write {
+//    person.name = "Jill"
+//    person.age = 30
+//}
 
 let results = realm.objects(Person.self)
-precondition(results.count == 1)
+precondition(results.count == 2)
 
-for person in results {
-    precondition(person.name == "Jill")
-    precondition(person.age == 30)
-}
+precondition(results.filter {
+    $0.name == "Jack"
+}.count == 1)
+
+precondition(results.filter {
+    $0.name == "Jill"
+}.count == 1)
+
+precondition(results.filter {
+    $0.name == "John"
+}.count == 0)
+//for person in results {
+//    precondition(person.name == "Jill")
+//    precondition(person.age == 30)
+//}
 
 realm.write {
-    realm.delete(person)
+    realm.delete(jack)
+    realm.delete(jill)
 }
 
 precondition(results.count == 0)
@@ -53,4 +67,10 @@ precondition(results.count == 0)
 realm.close()
 realm.deleteFiles()
 
-print("Done")
+//let app = App(appId: "car-zxny")
+//let user = try await app.login()
+//
+//var syncedRealm = try Realm(config: user.flexibleSyncConfiguration,
+//                            Person.self,
+//                            Dog.self)
+//

@@ -26,7 +26,7 @@ let cxxSettings: [CXXSetting] = [
     .define("REALM_VERSION_PATCH", to: String(coreVersion.patch)),
     .define("REALM_VERSION_EXTRA", to: "\"\(coreVersion.prereleaseIdentifiers.first ?? "")\""),
     .define("REALM_VERSION_STRING", to: "\"\(coreVersion)\""),
-//    .define("CPPREALM_HAVE_GENERATED_BRIDGE_TYPES", to: "1")
+    .define("CPPREALM_HAVE_GENERATED_BRIDGE_TYPES", to: "1")
 ]
 let testCxxSettings: [CXXSetting] = cxxSettings + [
     // Command-line `swift build` resolves header search paths
@@ -48,15 +48,16 @@ let package = Package(
         .library(name: "Realm", targets: ["Realm"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/jsflax/realm-cpp.git",
-                 from: "0.5.1"),
+        .package(path: "../realm-cpp3"),
+//        .package(url: "https://github.com/jsflax/realm-cpp.git",
+//                 from: "0.5.1"),
         .package(url: "https://github.com/apple/swift-syntax.git", from: "509.0.2"),
     ],
     targets: [
         .target(
             name: "realmCxx",
             dependencies: [
-                .product(name: "realm-cpp-sdk", package: "realm-cpp")
+                .product(name: "realm-cpp-sdk", package: "realm-cpp3")
             ],
             path: "realmCxx",
             cxxSettings: cxxSettings,

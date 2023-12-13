@@ -212,11 +212,24 @@ struct ObjectMacro : MemberMacro, MemberAttributeMacro, ExtensionMacro {
         }
     }
 }
+enum E: Error {
+    case bad(String)
+}
+struct CxxTry : ExpressionMacro {
+    static func expansion(of node: some SwiftSyntax.FreestandingMacroExpansionSyntax, in context: some SwiftSyntaxMacros.MacroExpansionContext) throws -> SwiftSyntax.ExprSyntax {
+//        throw E.bad(node.trailingClosure!.description)
+        return
+            """
+            try_catch \(raw: node.trailingClosure!)
+            """
+    }
+    
+}
 
 @main
 struct RealmMacrosPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
-        ObjectMacro.self, PersistedMacro.self
+        ObjectMacro.self, PersistedMacro.self, CxxTry.self
     ]
 }
 

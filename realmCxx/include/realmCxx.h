@@ -12,9 +12,43 @@
 #include <swift/bridging>
 #include <realm/object-store/object_schema.hpp>
 #include <realm/object-store/property.hpp>
+#include <realm/object-store/shared_realm.hpp>
 #include <realm/obj.hpp>
+#include <cpprealm/app.hpp>
 
 namespace bridge = realm::internal::bridge;
+
+static std::string string_view_to_string(std::string_view sv) {
+    return std::string(sv);
+}
+
+using fn_0 = void(^)();
+template <typename T>
+using ret_fn_0 = T(^)();
+template <typename T, typename V>
+using ret_fn_1 = T(^)(V);
+
+using ret_any_fn_0 = std::any(^)();
+
+static bridge::results results_filter(const bridge::results& results, bool(^fn)(bridge::obj)) {
+    return results.filter(fn);
+}
+
+static std::variant<bridge::realm, realm::Exception>  get_realm(bridge::realm::config c) {
+    try {
+        return bridge::realm(c);
+    } catch (realm::Exception e) {
+        return e;
+    }
+}
+template <typename T>
+static bool holds_exception(T v) {
+    return std::holds_alternative<realm::Exception>(v);
+}
+
+static realm::SharedRealm get_shared_realm(realm::RealmConfig config) {
+    return realm::Realm::get_shared_realm(config);
+}
 
 //template <typename T>
 static std::variant<std::string, int64_t, bool> my_variant { 42 };
@@ -202,6 +236,17 @@ observe(bridge::object m_object, std::function<void(object_change)> block, bool 
 }
 
 using fn = void(^)(const object_change&);
+
+template <typename T>
+using typed_fn = void(^)(const T&);
+using userFn = void(^)(const realm::user&, const std::optional<realm::app_error>&);
+
+static void login(realm::App app, realm::App::credentials credentials, userFn fn) {
+    app.login(credentials, [fn](auto user, auto error) {
+        fn(user, error);
+    });
+}
+
 static std::shared_ptr<bridge::notification_token> observe(const bridge::object& object,
                                                            fn f) {
     return std::make_shared<bridge::notification_token>(observe(object, [f](auto change) {
